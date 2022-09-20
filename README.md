@@ -1,6 +1,8 @@
-#Live Preview
+# Live Preview
+
 This project is live here: https://peers-club.pages.dev/
-# Getting Started with Create React App
+
+## Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
