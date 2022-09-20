@@ -7,7 +7,7 @@ import Form from 'react-bootstrap/Form'
 import Button from 'react-bootstrap/Button'
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
-import VideoPlayer from '../../components/VideoPlayer';
+import VideoPlayer from '../../components/VideoPlayer/VideoPlayer';
 
 import { Link, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react';
