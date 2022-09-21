@@ -27,7 +27,7 @@ export default function Call(params) {
         setMicrophoneDeviceId
     } = useContext(StoreContext);
 
-    const { sendPing, isChannelReady } = useContext(SocketContext);
+    const { sendPing, isChannelReady, canInitiateCall, callHappening } = useContext(SocketContext);
 
     useEffect(() => {
         async function getCameraStreamWithDeviceId() {
@@ -44,10 +44,10 @@ export default function Call(params) {
         getCameraStreamWithDeviceId();
     }, [microphoneDeviceId, cameraDeviceId])
 
-    useEffect(() => {
-        // isChannelReady && setTimeout(() => navigate(`/call`, { replace: true }), 1500);
+    // useEffect(() => {
+    //     // isChannelReady && setTimeout(() => navigate(`/call`, { replace: true }), 1500);
 
-    }, [isChannelReady])
+    // }, [isChannelReady])
 
     const handleButtonsClick = (whichButton) => {
         switch (whichButton) {
@@ -56,8 +56,8 @@ export default function Call(params) {
                 break;
 
             case 'hang-up':
-                sendPing('hang call', roomName) 
-            break;
+                sendPing('hang call', roomName)
+                break;
 
             case 'toggle-mic':
                 // mute my mic & notify
@@ -98,7 +98,10 @@ export default function Call(params) {
                             <label className='fw-semibold'>Remote Stream</label>
                             <div className='container'>
                                 <div className='col'>
-                                    <VideoPlayer className='rounded mx-auto d-block col' stream={localStream} isRemoteStream={false} />
+                                    {
+                                        callHappening ? <VideoPlayer className='rounded mx-auto d-block col' stream={localStream} isRemoteStream={false} /> :
+                                            <img src='https://via.placeholder.com/480x320.png?text=Waiting+For+Call+to+Initiate' alt='Just a place holder'></img>
+                                    }
                                 </div>
                             </div>
                         </div>
@@ -111,26 +114,26 @@ export default function Call(params) {
                 <div className='d-flex align-items-center justify-content-center'>
                     <Button variant="primary" className="m-2"
                         onClick={e => handleButtonsClick('init-call')}
-                        disabled={(roomName === '') ? true : false}
+                        disabled={!canInitiateCall}
                     >
                         Call
                     </Button>
                     <Button variant="primary" className="m-2"
                         onClick={e => handleButtonsClick('hang-up')}
-                        disabled={(roomName === '') ? true : false}
+                        disabled={!callHappening}
                     >
                         Hang up
                     </Button>
                     <Button variant="primary" className="m-2"
                         onClick={e => handleButtonsClick('mic-mute')}
-                        disabled={(roomName === '') ? true : false}
+                        disabled={true}
                     >
                         Mic Mute
                     </Button>
 
                     <Button variant="primary" className="m-2"
                         onClick={e => handleButtonsClick('voice-change')}
-                        disabled={(roomName === '') ? true : false}
+                        disabled={true}
                     >
                         Activate Voice Changer
                     </Button>

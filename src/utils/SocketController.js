@@ -13,7 +13,8 @@ export default function SocketController(props) {
     const [lastPong, setLastPong] = useState(null);
     const [isInitiator, setIsInitiator] = useState(false);
     const [isChannelReady, setIsChannelReady] = useState(false);
-
+    const [canInitiateCall, setCanInitiateCall] = useState(false);
+    const [callHappening, setCallHappening] = useState(false);
     const { roomName, showAlert, hideAlert } = useContext(StoreContext);
 
 
@@ -47,6 +48,15 @@ export default function SocketController(props) {
             setTimeout(() => {
                 showAlert(ALERTS.ROOM_JOINED);
             }, 1500);
+        });
+
+        socket.on('ready', () => {
+            console.log('Peers now ready for initiating call');
+            setTimeout(() => {
+                // adding delay to accomodate the other peer UI transition to Call screen
+                setCanInitiateCall(true);
+            }, 4500);
+            
         });
 
         socket.on('log', (array) => {
@@ -102,7 +112,7 @@ export default function SocketController(props) {
     }
 
     return (
-        <SocketContext.Provider value={{ sendPing, isChannelReady, isInitiator }}>
+        <SocketContext.Provider value={{ sendPing, isChannelReady, isInitiator, canInitiateCall, callHappening}}>
             {children}
         </SocketContext.Provider>
     );
