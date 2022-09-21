@@ -52,21 +52,26 @@ export default function Call(params) {
     const handleButtonsClick = (whichButton) => {
         switch (whichButton) {
             case 'init-call':
+                sendPing('begin call', roomName)
                 break;
 
             case 'hang-up':
-                break;
+                sendPing('hang call', roomName) 
+            break;
 
-            case 'mic-mute':
+            case 'toggle-mic':
+                // mute my mic & notify
+                sendPing('toggle mic', roomName)
                 break;
 
             case 'voice-change':
+                // AudioContext logic comes here
                 break;
 
             default:
                 break;
         }
-        sendPing('create or join', roomName)
+
     }
 
     return (

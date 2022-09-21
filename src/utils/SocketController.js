@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import io from 'socket.io-client';
 import { SocketContext } from '../contexts/SocketContext';
 import { StoreContext } from '../contexts/StoreContext';
+import { ALERTS } from './constants';
 
 const socket = io("ws://localhost:8001");
 
@@ -13,15 +14,15 @@ export default function SocketController(props) {
     const [isInitiator, setIsInitiator] = useState(false);
     const [isChannelReady, setIsChannelReady] = useState(false);
 
-    const { roomName } = useContext(StoreContext);
+    const { roomName, showAlert, hideAlert } = useContext(StoreContext);
 
 
     useEffect(() => {
-         
+
         socket.on('created', (roomObject) => {
             console.log(`Created room ${roomObject}`);
             setIsInitiator(true);
-            setIsChannelReady(true);
+            showAlert(ALERTS.NEW_ROOM_CREATED);
         });
 
         socket.on('full', (roomObject) => {
@@ -31,7 +32,7 @@ export default function SocketController(props) {
         socket.on('join', (roomObject) => {
             console.log(`Another peer made a request to join room ${roomObject}`);
             console.log(`This peer is the initiator of room ${roomObject}!`);
-            setIsChannelReady(true);
+            // setIsChannelReady(true);
         });
 
         socket.on('joined', (roomObject) => {
@@ -80,6 +81,10 @@ export default function SocketController(props) {
             case 'create or join':
                 socket.emit('create or join', roomName);
                 console.log('Attempted to create or  join room', roomName);
+                break;
+            case 'begin call':
+                socket.emit('call-peer', roomName);
+                console.log('Attempted to call other peer in room', roomName);
                 break;
 
             default:

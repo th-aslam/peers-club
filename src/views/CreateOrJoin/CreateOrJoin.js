@@ -13,6 +13,8 @@ import { useNavigate } from 'react-router-dom';
 import { useContext, useEffect, useState } from 'react';
 import { SocketContext } from '../../contexts/SocketContext';
 import { StoreContext } from '../../contexts/StoreContext';
+import { ALERTS } from '../../utils/constants';
+
 
 export default function CreateOrJoin(params) {
     const [localStream, setLocalStream] = useState(null);
@@ -24,11 +26,12 @@ export default function CreateOrJoin(params) {
         microphoneDeviceId,
         setRoomName,
         setCameraDeviceId,
-        setMicrophoneDeviceId
+        setMicrophoneDeviceId,
+        showAlert, hideAlert,
     } = useContext(StoreContext);
 
     const navigate = useNavigate();
-    const { sendPing, isChannelReady } = useContext(SocketContext);
+    const { sendPing, isChannelReady, isInitiator } = useContext(SocketContext);
 
     useEffect(() => {
         async function getCameraAndMicStream() {
@@ -65,11 +68,17 @@ export default function CreateOrJoin(params) {
     }, [microphoneDeviceId, cameraDeviceId])
 
     useEffect(() => {
-        isChannelReady && setTimeout(() => navigate(`/call`, { replace: true }), 1500);
 
-    }, [isChannelReady])
+        isInitiator && setTimeout(() => {
+            hideAlert()
+            navigate(`/call`, { replace: true }
+            )
+        }, 1500);
+
+    }, [isInitiator])
 
     const handleSubmit = () => {
+        showAlert(ALERTS.CREATE_OR_JOIN_SPINNER)
         sendPing('create or join', roomName)
     }
 
