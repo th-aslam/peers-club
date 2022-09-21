@@ -22,11 +22,17 @@ export default function SocketController(props) {
         socket.on('created', (roomObject) => {
             console.log(`Created room ${roomObject}`);
             setIsInitiator(true);
-            showAlert(ALERTS.NEW_ROOM_CREATED);
+            setTimeout(() => {
+                showAlert(ALERTS.NEW_ROOM_CREATED);
+            }, 1500);
+
         });
 
         socket.on('full', (roomObject) => {
             console.log(`Room ${roomObject} is full`);
+            setTimeout(() => {
+                showAlert(ALERTS.ALREADY_FILLED);
+            }, 1500);
         });
 
         socket.on('join', (roomObject) => {
@@ -38,6 +44,9 @@ export default function SocketController(props) {
         socket.on('joined', (roomObject) => {
             console.log(`joined: ${roomObject}`);
             setIsChannelReady(true);
+            setTimeout(() => {
+                showAlert(ALERTS.ROOM_JOINED);
+            }, 1500);
         });
 
         socket.on('log', (array) => {

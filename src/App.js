@@ -36,6 +36,25 @@ const showAlert = (type, data) => {
         timer: 1500
       })
       break;
+    case ALERTS.ROOM_JOINED:
+      Swal.fire({
+        position: 'top-end',
+        icon: 'info',
+        title: 'Room Joined',
+        showConfirmButton: false,
+        timer: 1500
+      })
+      break;
+      case ALERTS.ALREADY_FILLED:
+        Swal.fire({
+          position: 'top-end',
+          icon: 'error',
+          title: 'This Room is already full',
+          showConfirmButton: false,
+          timer: 1500
+        })
+        
+        break;
     default:
       break;
   }

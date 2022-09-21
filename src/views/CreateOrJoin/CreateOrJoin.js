@@ -68,14 +68,12 @@ export default function CreateOrJoin(params) {
     }, [microphoneDeviceId, cameraDeviceId])
 
     useEffect(() => {
-
-        isInitiator && setTimeout(() => {
+        (isInitiator || isChannelReady) && setTimeout(() => {
             hideAlert()
             navigate(`/call`, { replace: true }
             )
-        }, 1500);
-
-    }, [isInitiator])
+        }, 3000);
+    }, [isInitiator, isChannelReady])
 
     const handleSubmit = () => {
         showAlert(ALERTS.CREATE_OR_JOIN_SPINNER)
