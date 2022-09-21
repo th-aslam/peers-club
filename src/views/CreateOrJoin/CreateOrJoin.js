@@ -3,31 +3,45 @@ import "bootstrap/dist/css/bootstrap.css";
 
 
 import Container from 'react-bootstrap/Container';
-import Form from 'react-bootstrap/Form'
-import Button from 'react-bootstrap/Button'
+import Form from 'react-bootstrap/Form';
+import Button from 'react-bootstrap/Button';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import VideoPlayer from '../../components/VideoPlayer/VideoPlayer';
 
-import { Link, useNavigate } from 'react-router-dom'
-import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useContext, useEffect, useState } from 'react';
+import { SocketContext } from '../../contexts/SocketContext';
+import { StoreContext } from '../../contexts/StoreContext';
 
 export default function CreateOrJoin(params) {
     const [localStream, setLocalStream] = useState(null);
     const [cameraList, setcameraList] = useState([]);
     const [micsList, setMicsList] = useState([]);
-    const [roomName, setRoomName] = useState("");
-    const [cameraDeviceId, setCameraDeviceId] = useState("");
-    const [microphoneDeviceId, setMicrophoneDeviceId] = useState("");
+    const {
+        roomName,
+        cameraDeviceId,
+        microphoneDeviceId,
+        setRoomName,
+        setCameraDeviceId,
+        setMicrophoneDeviceId
+    } = useContext(StoreContext);
+
+    const navigate = useNavigate();
+    const { sendPing, isChannelReady } = useContext(SocketContext);
 
     useEffect(() => {
         async function getCameraAndMicStream() {
             try {
-                let stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true })
+                let stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
                 setLocalStream(stream);
                 let devices = await navigator.mediaDevices.enumerateDevices();
-                setcameraList(devices.filter(device => device.kind === 'videoinput'));
-                setMicsList(devices.filter(device => device.kind === 'audioinput'));
+                let camers = devices.filter(device => device.kind === 'videoinput')
+                let microphones = devices.filter(device => device.kind === 'audioinput')
+                setcameraList(camers);
+                setMicsList(microphones);
+                setCameraDeviceId(camers[0].deviceId);
+                setMicrophoneDeviceId(microphones[0].deviceId);
             } catch (error) {
                 alert(error.message);
             }
@@ -50,14 +64,23 @@ export default function CreateOrJoin(params) {
         getCameraStreamWithDeviceId();
     }, [microphoneDeviceId, cameraDeviceId])
 
+    useEffect(() => {
+        isChannelReady && setTimeout(() => navigate(`/call`, { replace: true }), 1500);
+
+    }, [isChannelReady])
+
+    const handleSubmit = () => {
+        sendPing('create or join', roomName)
+    }
 
     return (
+
         <Container>
             <Row>
                 <Col>
                     <div className='vh-100 d-flex align-items-center justify-content-center'>
                         <Form className='border border-2 container-fluid p-3'>
-                            <h2 className='text-center'>Join or Create Room</h2>
+                            <h2 className='text-center'>Create or Join Room</h2>
                             <Form.Group className="mb-3 d-grid gap-2" controlId="formBasicCheckbox">
                                 <Form.Label className='fw-semibold'>Watch Yourself Before Joining</Form.Label>
                                 <div className='container'>
@@ -108,7 +131,7 @@ export default function CreateOrJoin(params) {
                             </Form.Group>
 
                             <Button variant="primary"
-                                // onClick={e => handleSubmit(e)}
+                                onClick={e => handleSubmit()}
                                 disabled={(roomName === '') ? true : false}
                             >
                                 Create or Join Room
@@ -118,5 +141,6 @@ export default function CreateOrJoin(params) {
                 </Col>
             </Row>
         </Container>
+
     )
 }
