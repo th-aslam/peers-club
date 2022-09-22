@@ -27,7 +27,11 @@ export default function Call(params) {
         setMicrophoneDeviceId
     } = useContext(StoreContext);
 
-    const { sendPing, isChannelReady, canInitiateCall, callHappening } = useContext(SocketContext);
+    const { sendPing,
+        isChannelReady,
+        canInitiateCall,
+        callRinging,
+        callHappening } = useContext(SocketContext);
 
     useEffect(() => {
         async function getCameraStreamWithDeviceId() {
@@ -78,6 +82,8 @@ export default function Call(params) {
 
         <Container>
             <h2 className='text-center'>Calling Zone</h2>
+            <p className='text-center'>Room Name: {roomName}</p>
+
 
             <Row>
                 <Col>

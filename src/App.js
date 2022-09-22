@@ -28,7 +28,7 @@ const showAlert = (type, data) => {
       })
       break;
     case ALERTS.NEW_ROOM_CREATED:
-      Swal.fire({
+      MySwal.fire({
         position: 'top-end',
         icon: 'success',
         title: 'New Room Created',
@@ -37,7 +37,7 @@ const showAlert = (type, data) => {
       })
       break;
     case ALERTS.ROOM_JOINED:
-      Swal.fire({
+      MySwal.fire({
         position: 'top-end',
         icon: 'info',
         title: 'Room Joined',
@@ -45,16 +45,75 @@ const showAlert = (type, data) => {
         timer: 1500
       })
       break;
-      case ALERTS.ALREADY_FILLED:
-        Swal.fire({
-          position: 'top-end',
-          icon: 'error',
-          title: 'This Room is already full',
-          showConfirmButton: false,
-          timer: 1500
-        })
-        
-        break;
+    case ALERTS.ALREADY_FILLED:
+      MySwal.fire({
+        position: 'top-end',
+        icon: 'error',
+        title: 'This Room is already full',
+        showConfirmButton: false,
+        timer: 1500
+      })
+
+      break;
+    case ALERTS.PEER_CALLING:
+      MySwal.fire({
+        title: 'Received a Call',
+        text: "The other peer is trying to connect with you",
+        imageUrl: 'https://i.giphy.com/media/5xtDarxurku3BqgIbjq/giphy.gif',
+        imageWidth: 400,
+        imageHeight: 200,
+        imageAlt: 'Calling Simpson image',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes Pick Up!',
+        cancelButtonText: 'Decline',
+        allowOutsideClick: false,
+      }).then((result) => {
+        let { pickCallback, declineCallback } = data;
+        // call picked
+        if (result.isConfirmed) {
+          pickCallback();
+        }
+        // call declined
+        else {
+          declineCallback()
+        }
+      })
+      break;
+    case ALERTS.CALL_DAILING:
+      let { cancelCallback } = data;
+      MySwal.fire({
+        title: 'Calling the Peer Now',
+        text: "Wait until the receiver picks up the call",
+        imageUrl: 'https://i.giphy.com/media/xT5LMzhyrAku8HzaQE/giphy.gif',
+        imageWidth: 400,
+        imageHeight: 200,
+        imageAlt: 'Calling Simpson image',
+        confirmButtonText: 'End Call',
+        confirmButtonColor: '#d33',
+        allowOutsideClick: false,
+      }).then((result) => {
+        // I dial but ended before establishing the call
+        cancelCallback();
+
+      })
+      break;
+
+    case ALERTS.CALL_CANCELLED: // will be trigged only on remote end 
+      MySwal.fire({
+        icon: 'error',
+        title: 'Call Cancelled by Remote Peer',
+      })
+      break;
+    case ALERTS.CALL_DECLINED: // will be trigged only on remote end
+      MySwal.fire({
+        icon: 'error',
+        title: 'Call Declined by Remote Peer',
+      })
+      break;
+    case ALERTS.CALL_ENDED: // will be trigged only on remote end 
+      break;
     default:
       break;
   }
