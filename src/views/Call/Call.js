@@ -19,10 +19,11 @@ import { SDP_CONSTRAINTS } from '../../utils/constants';
 export default function Call(params) {
     const [localStream, setLocalStream] = useState(null);
     const [remoteStream, setRemoteStream] = useState(null);
+    const [inCall, setInCall] = useState(false);
 
     const [cameraList, setcameraList] = useState([]);
     const [micsList, setMicsList] = useState([]);
-    const [pc, setPc] = useState(null);
+    const [peerConnection, setPeerConnection] = useState(null);
     const {
         roomName,
         cameraDeviceId,
@@ -63,7 +64,7 @@ export default function Call(params) {
         }
     }, [microphoneDeviceId, cameraDeviceId])
 
-    // The caller will start RTCPeerConnection from this event 
+    //The caller will start RTCPeerConnection from this event 
     useEffect(() => {
         callHappening && maybeStart()
     }, [callHappening])
@@ -74,60 +75,67 @@ export default function Call(params) {
     }, [isPicked])
 
     useEffect(() => {
-        if (haveOffer !== null) {
-            pc.setRemoteDescription(new RTCSessionDescription(haveOffer));
-            doAnswer();
+        if (haveOffer !== null && peerConnection !== null) {
+            console.log('haveOffer from caller', peerConnection);
+            peerConnection.setRemoteDescription(new RTCSessionDescription(haveOffer));
+            doAnswer(peerConnection);
         }
 
-    }, [haveOffer])
+    }, [haveOffer, peerConnection])
 
     useEffect(() => {
-        if (haveAnswer !== null) {
-            pc.setRemoteDescription(new RTCSessionDescription(haveAnswer));
+        if (haveAnswer !== null && peerConnection !== null && callHappening) {
+            console.log('haveAnser from from receiver', peerConnection);
+            peerConnection.setRemoteDescription(new RTCSessionDescription(haveAnswer));
         }
 
-    }, [haveAnswer])
+    }, [haveAnswer, peerConnection])
 
     useEffect(() => {
-        if (haveCandidate !== null) {
+        if (haveCandidate !== null && peerConnection !== null && callHappening) {
+            console.log('haveCandidate', peerConnection);
             const candidate = new RTCIceCandidate({
                 sdpMLineIndex: haveCandidate.label,
                 candidate: haveCandidate.candidate,
             });
-            pc.addIceCandidate(candidate);
+            peerConnection.addIceCandidate(candidate);
         }
 
-    }, [haveCandidate])
+    }, [haveCandidate, peerConnection])
 
 
-    const doCall = () => {
+    const doCall = (pc) => {
         console.log('Sending offer to peer');
         pc.createOffer([SDP_CONSTRAINTS])
-            .then((offer) => setLocalAndSendMessage(offer))
+            .then((offer) => setLocalAndSendMessage(pc, offer))
             .catch(handleCreateOfferError);
     }
 
     const maybeStart = () => {
-        console.log('>>>>>>> maybeStart() ', callHappening, localStream, canInitiateCall);
-        if (!callHappening && typeof localStream !== 'undefined' && canInitiateCall) {
+        console.log('>>>>>>> maybeStart() ', callHappening, localStream, inCall);
+        // if (!callHappening && typeof localStream !== 'undefined' && canInitiateCall) {
+        if ((isPicked || callHappening) && typeof localStream !== 'undefined' && !inCall) {
+
             console.log('>>>>>> creating peer connection');
-            createPeerConnection();
-            pc.addStream(localStream);
+            let pcon = createPeerConnection();
+            pcon.addStream(localStream);
             console.log('isInitiator', isInitiator);
             if (isInitiator) {
-                doCall();
+                doCall(pcon);
             }
+            setInCall(true);
         }
     }
 
     function createPeerConnection() {
         try {
-            let pc = new RTCPeerConnection(/* Add iceServers here**/);
-            pc.onicecandidate = handleIceCandidate;
-            pc.onaddstream = handleRemoteStreamAdded;
-            pc.onremovestream = handleRemoteStreamRemoved;
+            let pcon = new RTCPeerConnection(/* Add iceServers here**/);
+            pcon.onicecandidate = handleIceCandidate;
+            pcon.onaddstream = handleRemoteStreamAdded;
+            pcon.onremovestream = handleRemoteStreamRemoved;
             console.log('Created RTCPeerConnnection');
-            setPc(pc);
+            setPeerConnection(pcon);
+            return pcon;
         } catch (e) {
             console.log(`Failed to create PeerConnection, exception: ${e.message}`);
             alert('Cannot create RTCPeerConnection object.');
@@ -135,7 +143,7 @@ export default function Call(params) {
     }
 
     function handleIceCandidate(event) {
-        console.log('icecandidate event: ', event);
+        console.log('my icecandidate event: ', event);
         if (event.candidate) {
             sendMessage({
                 type: 'candidate',
@@ -151,10 +159,10 @@ export default function Call(params) {
     function handleRemoteStreamAdded(event) {
         console.log('Remote stream added.');
         setRemoteStream(event.stream);
-
     }
 
     function handleRemoteStreamRemoved(event) {
+        setRemoteStream(null);
         console.log('Remote stream removed. Event: ', event);
     }
 
@@ -162,7 +170,7 @@ export default function Call(params) {
         console.log('createOffer() error: ', event);
     }
 
-    function setLocalAndSendMessage(sessionDescription) {
+    function setLocalAndSendMessage(pc, sessionDescription) {
         // Set Opus as the preferred codec in SDP if Opus is present.
         //  sessionDescription.sdp = preferOpus(sessionDescription.sdp);
         pc.setLocalDescription(sessionDescription);
@@ -170,21 +178,24 @@ export default function Call(params) {
         sendMessage(sessionDescription);
     }
 
-    function doAnswer() {
+    function doAnswer(pc) {
         console.log('Sending answer to peer.');
         pc.createAnswer()
-            .then((answer) => setLocalAndSendMessage(answer))
+            .then((answer) => {
+                setLocalAndSendMessage(pc, answer);
+                setCallHappening(true);
+            })
             .catch(onCreateSessionDescriptionError);
     }
 
     function onCreateSessionDescriptionError(error) {
         console.error(`Failed to create session description: ${error.toString()}`);
     }
-
+    
     function stop() {
         setCallHappening(false);
-        pc.close();
-        setPc(null);
+        // pc.close();
+        // setPc(null);
     }
 
     function handleRemoteHangup() {

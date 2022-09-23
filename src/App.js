@@ -56,7 +56,7 @@ const showAlert = (type, data) => {
 
       break;
     case ALERTS.PEER_CALLING:
-      let { pickCallback, declineCallback, room } = data;
+      let { pickCallback, declineCallback } = data;
       MySwal.fire({
         title: 'Received a Call',
         text: "The other peer is trying to connect with you",
@@ -78,8 +78,7 @@ const showAlert = (type, data) => {
         }
         // call declined
         else {
-          console.error(room);
-          declineCallback(room)
+          declineCallback()
         }
       })
       break;

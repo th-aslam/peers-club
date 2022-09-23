@@ -8,6 +8,7 @@ const socket = io("ws://localhost:8001");
 
 
 export default function SocketController(props) {
+    
     const { children } = props;
     const [isInitiator, setIsInitiator] = useState(false);
     const [isChannelReady, setIsChannelReady] = useState(false);
@@ -27,10 +28,11 @@ export default function SocketController(props) {
 
     // const [call, setcall] = useState(initialState);
     const { roomName, showAlert, hideAlert } = useContext(StoreContext);
-
+    let stopDoublePropagation = false;
 
     useEffect(() => {
-
+        if(stopDoublePropagation) return;
+        stopDoublePropagation = true;
         socket.on('created', (roomObject) => {
             console.log(`ClientRecvLog: Created room ${roomObject}`);
             setIsInitiator(true);
@@ -99,10 +101,11 @@ export default function SocketController(props) {
         });
 
         socket.on('remote-accepts-call', (data) => {
-            console.log('ClientRecvLog: Remote accepts this call, should initiat RTCPeerConnection');
+            console.log('ClientRecvLog: Remote accepts this call, should initiate RTCPeerConnection');
             console.log('ClientRecvLog: Lets see what Server data is: ', data);
             setCallRinging(false);
             setCallHappening(true);
+            // setIsPicked(true);
             showAlert(ALERTS.CALL_ACCEPTED);
         });
 
@@ -127,28 +130,28 @@ export default function SocketController(props) {
 
         // This client receives a message
         socket.on('message', (message) => {
-            console.log('Client received message:', message);
+            // console.log('Client received message:', message);
             if (message === 'got user media') {
                 // maybeStart();
             } else if (message.type === 'offer') {
                 setHaveOffer(message);
                 // pc.setRemoteDescription(new RTCSessionDescription(message));
                 // doAnswer();
-            } else if (message.type === 'answer' && callHappening) {
+            } else if (message.type === 'answer') {
+                console.error('answer aya tha', message);
                 setHaveAnswer(message);
                 // pc.setRemoteDescription(new RTCSessionDescription(message));
-            } else if (message.type === 'candidate' && callHappening) {
+            } else if (message.type === 'candidate') {
                 setHaveCandidate(message);
                 // const candidate = new RTCIceCandidate({
                 //     sdpMLineIndex: message.label,
                 //     candidate: message.candidate,
                 // });
                 // pc.addIceCandidate(candidate);
-            } else if (message === 'bye' && callHappening) {
+            } else if (message === 'bye') {
                 // handleRemoteHangup();
             }
         });
-
 
         return () => {
             socket.off('connect');
@@ -166,7 +169,7 @@ export default function SocketController(props) {
     }, [isDeclined]);
 
     useEffect(() => {
-        if (isPicked) {
+        if (!isInitiator && isPicked) {
             socket.emit('call-accept', roomName);
             console.log('ClientSentLog: Accepting Call, waiting for Offer SDP cycle to start on socket.on("message")', roomName);
             showAlert(ALERTS.CALL_ACCEPTED);
@@ -178,7 +181,7 @@ export default function SocketController(props) {
         setIsPicked(true);
     }
 
-    const declineCallback = (_roomName) => {
+    const declineCallback = () => {
         setIsDeclined(true);
     }
 
@@ -216,6 +219,7 @@ export default function SocketController(props) {
         console.log('Client sending message: ',);
         socket.emit('message', payload);
     }
+
     return (
         <SocketContext.Provider value={{
             sendPing, sendMessage,
