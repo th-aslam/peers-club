@@ -8,4 +8,10 @@ export const ALERTS = {
     CALL_DECLINED: 'call-declined',
     CALL_CANCELLED: 'call-cancelled',
     CALL_ENDED: 'call-ended',
+    CALL_ACCEPTED: 'call-accepted',
   }
+
+  export const SDP_CONSTRAINTS = {
+    offerToReceiveAudio: true,
+    offerToReceiveVideo: true,
+  }; 

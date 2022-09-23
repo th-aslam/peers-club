@@ -9,13 +9,22 @@ const socket = io("ws://localhost:8001");
 
 export default function SocketController(props) {
     const { children } = props;
-    const [isConnected, setIsConnected] = useState(socket.connected);
-    const [lastPong, setLastPong] = useState(null);
     const [isInitiator, setIsInitiator] = useState(false);
     const [isChannelReady, setIsChannelReady] = useState(false);
     const [canInitiateCall, setCanInitiateCall] = useState(false);
     const [callRinging, setCallRinging] = useState(false);
     const [callHappening, setCallHappening] = useState(false);
+
+    //callbacks triggers
+    const [isPicked, setIsPicked] = useState(false);
+    const [isDeclined, setIsDeclined] = useState(false);
+    const [isCallEnded, setisCallEnded] = useState(false);
+
+    // RTCPeerCon & SDP envents
+    const [haveOffer, setHaveOffer] = useState(null);
+    const [haveAnswer, setHaveAnswer] = useState(null);
+    const [haveCandidate, setHaveCandidate] = useState(null);
+
     // const [call, setcall] = useState(initialState);
     const { roomName, showAlert, hideAlert } = useContext(StoreContext);
 
@@ -41,7 +50,7 @@ export default function SocketController(props) {
         socket.on('join', (roomObject) => {
             console.log(`ClientRecvLog: Another peer made a request to join room ${roomObject}`);
             console.log(`ClientRecvLog: This peer is the initiator of room ${roomObject}!`);
-            // setIsChannelReady(true);
+
         });
 
         socket.on('joined', (roomObject) => {
@@ -68,7 +77,8 @@ export default function SocketController(props) {
             setCallRinging(true);
             showAlert(ALERTS.PEER_CALLING, {
                 pickCallback,
-                declineCallback
+                declineCallback,
+                room: roomName,
             });
         });
 
@@ -86,6 +96,14 @@ export default function SocketController(props) {
             setCanInitiateCall(true); // Enable client to make new calls now 
             setCallRinging(false);
             showAlert(ALERTS.CALL_DECLINED);
+        });
+
+        socket.on('remote-accepts-call', (data) => {
+            console.log('ClientRecvLog: Remote accepts this call, should initiat RTCPeerConnection');
+            console.log('ClientRecvLog: Lets see what Server data is: ', data);
+            setCallRinging(false);
+            setCallHappening(true);
+            showAlert(ALERTS.CALL_ACCEPTED);
         });
 
         socket.on('remote-ends-call', (data) => {
@@ -110,25 +128,25 @@ export default function SocketController(props) {
         // This client receives a message
         socket.on('message', (message) => {
             console.log('Client received message:', message);
-            // if (message === 'got user media') {
-            //     // maybeStart();
-            // } else if (message.type === 'offer') {
-            //     // if (!isInitiator && !isStarted) {
-            //     //     maybeStart();
-            //     // }
-            //     // pc.setRemoteDescription(new RTCSessionDescription(message));
-            //     // doAnswer();
-            // } else if (message.type === 'answer' && isStarted) {
-            //     pc.setRemoteDescription(new RTCSessionDescription(message));
-            // } else if (message.type === 'candidate' && isStarted) {
-            //     const candidate = new RTCIceCandidate({
-            //         sdpMLineIndex: message.label,
-            //         candidate: message.candidate,
-            //     });
-            //     pc.addIceCandidate(candidate);
-            // } else if (message === 'bye' && isStarted) {
-            //     handleRemoteHangup();
-            // }
+            if (message === 'got user media') {
+                // maybeStart();
+            } else if (message.type === 'offer') {
+                setHaveOffer(message);
+                // pc.setRemoteDescription(new RTCSessionDescription(message));
+                // doAnswer();
+            } else if (message.type === 'answer' && callHappening) {
+                setHaveAnswer(message);
+                // pc.setRemoteDescription(new RTCSessionDescription(message));
+            } else if (message.type === 'candidate' && callHappening) {
+                setHaveCandidate(message);
+                // const candidate = new RTCIceCandidate({
+                //     sdpMLineIndex: message.label,
+                //     candidate: message.candidate,
+                // });
+                // pc.addIceCandidate(candidate);
+            } else if (message === 'bye' && callHappening) {
+                // handleRemoteHangup();
+            }
         });
 
 
@@ -139,10 +157,29 @@ export default function SocketController(props) {
         };
     }, []);
 
+    useEffect(() => {
+        if (isDeclined) {
+            socket.emit('call-decline', roomName);
+            console.log('ClientSentLog: Declining Call, do not want to pick this call with other peer in room', roomName);
+            setCanInitiateCall(true);
+        }
+    }, [isDeclined]);
+
+    useEffect(() => {
+        if (isPicked) {
+            socket.emit('call-accept', roomName);
+            console.log('ClientSentLog: Accepting Call, waiting for Offer SDP cycle to start on socket.on("message")', roomName);
+            showAlert(ALERTS.CALL_ACCEPTED);
+        }
+    }, [isPicked]);
+
+
     const pickCallback = () => {
-        // setCanInitiateCall(true);
-        // socket.emit('call-cancel', roomName);
-        // console.log('ClientSentLog: Cancelling this call with other peer in room', roomName);
+        setIsPicked(true);
+    }
+
+    const declineCallback = (_roomName) => {
+        setIsDeclined(true);
     }
 
     const cancelCallback = () => {
@@ -151,19 +188,11 @@ export default function SocketController(props) {
         setCanInitiateCall(true);
     }
 
-    const declineCallback = () => {
-        socket.emit('call-decline', roomName);
-        console.log('ClientSentLog: Declining Call, do not want to pick this call with other peer in room', roomName);
-        setCanInitiateCall(true);
-    }
-
     const endCallback = () => {
         setCanInitiateCall(true);
         socket.emit('end-call', roomName);
         console.log('ClientSentLog: Ending the call with other peer in room', roomName);
     }
-
-
 
     const sendPing = (type, data) => {
         switch (type) {
@@ -182,8 +211,19 @@ export default function SocketController(props) {
         }
     }
 
+    const sendMessage = (message) => {
+        let payload = { room: roomName, message }
+        console.log('Client sending message: ',);
+        socket.emit('message', payload);
+    }
     return (
-        <SocketContext.Provider value={{ sendPing, isChannelReady, isInitiator, canInitiateCall, callRinging, callHappening }}>
+        <SocketContext.Provider value={{
+            sendPing, sendMessage,
+            isChannelReady, isInitiator, canInitiateCall, callRinging, callHappening, isPicked, isCallEnded,
+            haveOffer, haveAnswer, haveCandidate,
+            setisCallEnded,
+            setCallHappening
+        }}>
             {children}
         </SocketContext.Provider>
     );

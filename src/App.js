@@ -56,6 +56,7 @@ const showAlert = (type, data) => {
 
       break;
     case ALERTS.PEER_CALLING:
+      let { pickCallback, declineCallback, room } = data;
       MySwal.fire({
         title: 'Received a Call',
         text: "The other peer is trying to connect with you",
@@ -70,14 +71,15 @@ const showAlert = (type, data) => {
         cancelButtonText: 'Decline',
         allowOutsideClick: false,
       }).then((result) => {
-        let { pickCallback, declineCallback } = data;
+
         // call picked
         if (result.isConfirmed) {
           pickCallback();
         }
         // call declined
         else {
-          declineCallback()
+          console.error(room);
+          declineCallback(room)
         }
       })
       break;
@@ -99,7 +101,6 @@ const showAlert = (type, data) => {
 
       })
       break;
-
     case ALERTS.CALL_CANCELLED: // will be trigged only on remote end 
       MySwal.fire({
         icon: 'error',
@@ -111,6 +112,14 @@ const showAlert = (type, data) => {
         icon: 'error',
         title: 'Call Declined by Remote Peer',
       })
+      break;
+    case ALERTS.CALL_ACCEPTED: // will be trigged only on remote end
+    MySwal.fire({
+      title: 'Call Picked: Connecting',
+      didOpen: () => {
+        Swal.showLoading()
+      }
+    })
       break;
     case ALERTS.CALL_ENDED: // will be trigged only on remote end 
       break;
