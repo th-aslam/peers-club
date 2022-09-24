@@ -4,11 +4,11 @@ import { SocketContext } from '../contexts/SocketContext';
 import { StoreContext } from '../contexts/StoreContext';
 import { ALERTS } from './constants';
 
-const socket = io("ws://localhost:8001");
+const socket = io("ws://localhost:8001"); //https://peer-club-backend.pages.dev
 
 
 export default function SocketController(props) {
-    
+
     const { children } = props;
     const [isInitiator, setIsInitiator] = useState(false);
     const [isChannelReady, setIsChannelReady] = useState(false);
@@ -22,16 +22,17 @@ export default function SocketController(props) {
     const [isCallEnded, setisCallEnded] = useState(false);
 
     // RTCPeerCon & SDP envents
+    const [haveIceServers, setHaveIceServers] = useState(null);
     const [haveOffer, setHaveOffer] = useState(null);
     const [haveAnswer, setHaveAnswer] = useState(null);
     const [haveCandidate, setHaveCandidate] = useState(null);
 
     // const [call, setcall] = useState(initialState);
-    const { roomName, showAlert, hideAlert } = useContext(StoreContext);
+    const { roomName, setRoomName, showAlert, hideAlert } = useContext(StoreContext);
     let stopDoublePropagation = false;
 
     useEffect(() => {
-        if(stopDoublePropagation) return;
+        if (stopDoublePropagation) return;
         stopDoublePropagation = true;
         socket.on('created', (roomObject) => {
             console.log(`ClientRecvLog: Created room ${roomObject}`);
@@ -72,15 +73,22 @@ export default function SocketController(props) {
 
         });
 
+        socket.on('iceservers', (iceServers) => {
+            console.warn('Got IceServers: ', iceServers);
+            setHaveIceServers(iceServers);
+        });
+
         socket.on('received-call', (data) => {
+            let { message, iceServers } = data;
             console.log('ClientRecvLog: Seems like I received a call');
-            console.log('ClientRecvLog: Lets see what Server data is: ', data);
+            console.log('ClientRecvLog: Lets see what Server data is: ', message);
+            console.warn(iceServers);
+            setHaveIceServers(iceServers);
             setCanInitiateCall(false); // Stop client to make new calls until ringing 
             setCallRinging(true);
             showAlert(ALERTS.PEER_CALLING, {
                 pickCallback,
                 declineCallback,
-                room: roomName,
             });
         });
 
@@ -141,14 +149,19 @@ export default function SocketController(props) {
                 console.error('answer aya tha', message);
                 setHaveAnswer(message);
                 // pc.setRemoteDescription(new RTCSessionDescription(message));
-            } else if (message.type === 'candidate') {
-                setHaveCandidate(message);
+            } else if (message.type === 'candidates') {
+                let remoteCandifates = message.candidatesList;
+                remoteCandifates.forEach(candidate => {
+                    setHaveCandidate(candidate);
+                });
+
                 // const candidate = new RTCIceCandidate({
                 //     sdpMLineIndex: message.label,
                 //     candidate: message.candidate,
                 // });
                 // pc.addIceCandidate(candidate);
             } else if (message === 'bye') {
+                setisCallEnded(true);
                 // handleRemoteHangup();
             }
         });
@@ -169,12 +182,39 @@ export default function SocketController(props) {
     }, [isDeclined]);
 
     useEffect(() => {
-        if (!isInitiator && isPicked) {
+        if (isPicked) {
             socket.emit('call-accept', roomName);
             console.log('ClientSentLog: Accepting Call, waiting for Offer SDP cycle to start on socket.on("message")', roomName);
             showAlert(ALERTS.CALL_ACCEPTED);
         }
     }, [isPicked]);
+
+    useEffect(() => {
+        callHappening && hideAlert()
+    }, [callHappening]);
+
+    useEffect(() => {
+        if (isCallEnded) {
+            showAlert(ALERTS.CALL_ENDED);
+            setIsInitiator(false);
+            setIsChannelReady(false);
+            setCanInitiateCall(false);
+            setCallRinging(false);
+
+            setIsPicked(false);
+            setIsDeclined(false);
+
+            setHaveIceServers(null);
+            setHaveOffer(null);
+            setHaveAnswer(null);
+            setHaveCandidate(null);
+            setRoomName('');
+            setTimeout(() => {
+                setisCallEnded(false);
+            }, 3000);  
+        }
+
+    }, [isCallEnded])
 
 
     const pickCallback = () => {
@@ -224,9 +264,9 @@ export default function SocketController(props) {
         <SocketContext.Provider value={{
             sendPing, sendMessage,
             isChannelReady, isInitiator, canInitiateCall, callRinging, callHappening, isPicked, isCallEnded,
-            haveOffer, haveAnswer, haveCandidate,
+            haveIceServers, haveOffer, haveAnswer, haveCandidate,
             setisCallEnded,
-            setCallHappening
+            setCallHappening,
         }}>
             {children}
         </SocketContext.Provider>

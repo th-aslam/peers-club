@@ -17,13 +17,14 @@ import { ALERTS } from '../../utils/constants';
 
 
 export default function CreateOrJoin(params) {
-    const [localStream, setLocalStream] = useState(null);
     const [cameraList, setcameraList] = useState([]);
     const [micsList, setMicsList] = useState([]);
     const {
         roomName,
         cameraDeviceId,
         microphoneDeviceId,
+        localStream, 
+        setLocalStream,
         setRoomName,
         setCameraDeviceId,
         setMicrophoneDeviceId,

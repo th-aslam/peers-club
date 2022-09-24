@@ -121,6 +121,10 @@ const showAlert = (type, data) => {
     })
       break;
     case ALERTS.CALL_ENDED: // will be trigged only on remote end 
+    MySwal.fire({
+      title: 'Call Ended!',
+      text: 'The remote peer Hanged Up!', 
+    })
       break;
     default:
       break;
@@ -135,7 +139,7 @@ function App() {
   const [roomName, setRoomName] = useState("");
   const [cameraDeviceId, setCameraDeviceId] = useState("");
   const [microphoneDeviceId, setMicrophoneDeviceId] = useState("");
-
+  const [localStream, setLocalStream] = useState(null);
 
   return (
     <StoreContext.Provider value={
@@ -143,10 +147,11 @@ function App() {
         roomName,
         cameraDeviceId,
         microphoneDeviceId,
+        localStream, 
+        setLocalStream,
         setRoomName,
         setCameraDeviceId,
         setMicrophoneDeviceId,
-
         showAlert, hideAlert
       }}>
       <SocketController>

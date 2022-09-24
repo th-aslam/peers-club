@@ -15,9 +15,8 @@ import { SDP_CONSTRAINTS } from '../../utils/constants';
 
 
 
-
 export default function Call(params) {
-    const [localStream, setLocalStream] = useState(null);
+
     const [remoteStream, setRemoteStream] = useState(null);
     const [inCall, setInCall] = useState(false);
 
@@ -28,41 +27,44 @@ export default function Call(params) {
         roomName,
         cameraDeviceId,
         microphoneDeviceId,
+        localStream,
+        setLocalStream,
         setRoomName,
         setCameraDeviceId,
         setMicrophoneDeviceId
     } = useContext(StoreContext);
 
+    let myCandidatesList = [];
     const {
         sendPing,
         sendMessage,
         isInitiator,
         isPicked,
+        isCallEnded,
+        haveIceServers,
         haveOffer,
         haveAnswer,
         haveCandidate,
         canInitiateCall,
-        callRinging,
         callHappening,
         setCallHappening } = useContext(SocketContext);
 
-    useEffect(() => {
-        async function getCameraStreamWithDeviceId() {
-            try {
-                let stream = await navigator.mediaDevices.getUserMedia({
-                    audio: microphoneDeviceId !== '' ? { deviceId: microphoneDeviceId } : true,
-                    video: cameraDeviceId !== '' ? { deviceId: cameraDeviceId } : true
-                })
-                setLocalStream(stream);
-            } catch (error) {
-                alert(error.message);
-            }
-        }
-        getCameraStreamWithDeviceId();
-        return () => {
-            // sendMessage('bye');
-        }
-    }, [microphoneDeviceId, cameraDeviceId])
+    // useEffect(() => {
+    //     async function getCameraStreamWithDeviceId() {
+    //         try {
+    //             let stream = await navigator.mediaDevices.getUserMedia({
+    //                 audio: microphoneDeviceId !== '' ? { deviceId: microphoneDeviceId } : true,
+    //                 video: cameraDeviceId !== '' ? { deviceId: cameraDeviceId } : true
+    //             })
+    //             setLocalStream(stream);
+    //         } catch (error) {
+    //             alert(error.message);
+    //         }
+    //     }
+    //     getCameraStreamWithDeviceId();
+    //     return () => {
+    //     }
+    // }, [microphoneDeviceId, cameraDeviceId])
 
     //The caller will start RTCPeerConnection from this event 
     useEffect(() => {
@@ -71,7 +73,10 @@ export default function Call(params) {
 
     // The receiver will fire this event when accepts the call to do RTCPeerConnection
     useEffect(() => {
-        isPicked && maybeStart()
+        if (isPicked) {
+            maybeStart()
+            setCallHappening(true);
+        }
     }, [isPicked])
 
     useEffect(() => {
@@ -84,15 +89,15 @@ export default function Call(params) {
     }, [haveOffer, peerConnection])
 
     useEffect(() => {
-        if (haveAnswer !== null && peerConnection !== null && callHappening) {
+        if (haveAnswer !== null && peerConnection !== null) {
             console.log('haveAnser from from receiver', peerConnection);
             peerConnection.setRemoteDescription(new RTCSessionDescription(haveAnswer));
         }
 
-    }, [haveAnswer, peerConnection])
+    }, [haveAnswer, peerConnection, callHappening])
 
     useEffect(() => {
-        if (haveCandidate !== null && peerConnection !== null && callHappening) {
+        if (haveCandidate !== null && peerConnection !== null) {
             console.log('haveCandidate', peerConnection);
             const candidate = new RTCIceCandidate({
                 sdpMLineIndex: haveCandidate.label,
@@ -101,7 +106,11 @@ export default function Call(params) {
             peerConnection.addIceCandidate(candidate);
         }
 
-    }, [haveCandidate, peerConnection])
+    }, [haveCandidate, peerConnection, callHappening])
+
+    useEffect(() => {
+        isCallEnded && handleRemoteHangup();
+    }, [isCallEnded])
 
 
     const doCall = (pc) => {
@@ -115,11 +124,10 @@ export default function Call(params) {
         console.log('>>>>>>> maybeStart() ', callHappening, localStream, inCall);
         // if (!callHappening && typeof localStream !== 'undefined' && canInitiateCall) {
         if ((isPicked || callHappening) && typeof localStream !== 'undefined' && !inCall) {
-
             console.log('>>>>>> creating peer connection');
             let pcon = createPeerConnection();
             pcon.addStream(localStream);
-            console.log('isInitiator', isInitiator);
+            
             if (isInitiator) {
                 doCall(pcon);
             }
@@ -129,7 +137,7 @@ export default function Call(params) {
 
     function createPeerConnection() {
         try {
-            let pcon = new RTCPeerConnection(/* Add iceServers here**/);
+            let pcon = new RTCPeerConnection(haveIceServers);
             pcon.onicecandidate = handleIceCandidate;
             pcon.onaddstream = handleRemoteStreamAdded;
             pcon.onremovestream = handleRemoteStreamRemoved;
@@ -145,14 +153,19 @@ export default function Call(params) {
     function handleIceCandidate(event) {
         console.log('my icecandidate event: ', event);
         if (event.candidate) {
-            sendMessage({
+            let candidate = {
                 type: 'candidate',
                 label: event.candidate.sdpMLineIndex,
                 id: event.candidate.sdpMid,
                 candidate: event.candidate.candidate,
-            });
+            }
+            myCandidatesList.push(candidate);
         } else {
-            console.log('End of candidates.');
+            console.log('End of candidates. Now sending to remote peer');
+            sendMessage({
+                type: 'candidates',
+                candidatesList: myCandidatesList,
+            });
         }
     }
 
@@ -183,7 +196,6 @@ export default function Call(params) {
         pc.createAnswer()
             .then((answer) => {
                 setLocalAndSendMessage(pc, answer);
-                setCallHappening(true);
             })
             .catch(onCreateSessionDescriptionError);
     }
@@ -191,17 +203,18 @@ export default function Call(params) {
     function onCreateSessionDescriptionError(error) {
         console.error(`Failed to create session description: ${error.toString()}`);
     }
-    
+
     function stop() {
+        peerConnection.close(); // close the connection
         setCallHappening(false);
-        // pc.close();
-        // setPc(null);
+        setRemoteStream(null)
+        setInCall(false)
+        setPeerConnection(null);
     }
 
     function handleRemoteHangup() {
         console.log('Session terminated.');
         stop();
-        isInitiator = false;
     }
 
     const handleButtonsClick = (whichButton) => {
@@ -211,7 +224,8 @@ export default function Call(params) {
                 break;
 
             case 'hang-up':
-                sendPing('hang call', roomName)
+                sendMessage('bye'); // send a bye message to remote peer
+                stop();
                 break;
 
             case 'toggle-mic':
