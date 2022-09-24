@@ -12,13 +12,14 @@ import { useContext, useEffect, useState } from 'react';
 import { SocketContext } from '../../contexts/SocketContext';
 import { StoreContext } from '../../contexts/StoreContext';
 import { SDP_CONSTRAINTS } from '../../utils/constants';
-
+import { demonBeastTransform } from '../../utils/VoiceChanger';
 
 
 export default function Call(params) {
-
+    const [localFilteredStream, setLocalFilteredStream] = useState(null);
     const [remoteStream, setRemoteStream] = useState(null);
     const [inCall, setInCall] = useState(false);
+    const [doFilter, setDoFilter] = useState(false);
 
     const [cameraList, setcameraList] = useState([]);
     const [micsList, setMicsList] = useState([]);
@@ -48,7 +49,7 @@ export default function Call(params) {
         canInitiateCall,
         callHappening,
         setCallHappening } = useContext(SocketContext);
-
+    const [finalStream, setFinalStream] = useState(null);
     // useEffect(() => {
     //     async function getCameraStreamWithDeviceId() {
     //         try {
@@ -65,6 +66,31 @@ export default function Call(params) {
     //     return () => {
     //     }
     // }, [microphoneDeviceId, cameraDeviceId])
+
+
+
+
+    useEffect(() => {
+        const applyFilter = async (stream) => {
+            let filteredMediaStream = await demonBeastTransform(stream)
+            console.log(filteredMediaStream);
+            const [audioTrack] = filteredMediaStream.getAudioTracks();
+            const sender = peerConnection.getSenders().find((s) => s.track.kind === audioTrack.kind);
+            console.log('Found sender:', sender);
+            sender.replaceTrack(audioTrack);
+        }
+        if (peerConnection) {
+            if (doFilter) {
+                (async () => await applyFilter(localStream))();
+            } else {
+                const [audioTrack] = localStream.getAudioTracks();
+                const sender = peerConnection.getSenders().find((s) => s.track.kind === audioTrack.kind);
+                console.log('Found sender:', sender);
+                sender.replaceTrack(audioTrack);
+            }
+        }
+
+    }, [doFilter])
 
     //The caller will start RTCPeerConnection from this event 
     useEffect(() => {
@@ -126,8 +152,8 @@ export default function Call(params) {
         if ((isPicked || callHappening) && typeof localStream !== 'undefined' && !inCall) {
             console.log('>>>>>> creating peer connection');
             let pcon = createPeerConnection();
-            pcon.addStream(localStream);
-            
+            // pcon.addStream(doFilter ? localFilteredStream : localStream);
+            localStream.getTracks().forEach(track => pcon.addTrack(track, localStream))
             if (isInitiator) {
                 doCall(pcon);
             }
@@ -235,6 +261,7 @@ export default function Call(params) {
 
             case 'voice-change':
                 // AudioContext logic comes here
+                setDoFilter(!doFilter);
                 break;
 
             default:
@@ -304,14 +331,11 @@ export default function Call(params) {
 
                     <Button variant="primary" className="m-2"
                         onClick={e => handleButtonsClick('voice-change')}
-                        disabled={true}
+                        disabled={!callHappening}
                     >
-                        Activate Voice Changer
+                        {doFilter ? 'Voice Changer (Activated)' : 'Activate Voice Changer'}
                     </Button>
                 </div>
-
-
-
             </Row>
         </Container>
 
