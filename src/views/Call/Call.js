@@ -16,10 +16,11 @@ import { demonBeastTransform } from '../../utils/VoiceChanger';
 
 
 export default function Call(params) {
-    const [localFilteredStream, setLocalFilteredStream] = useState(null);
     const [remoteStream, setRemoteStream] = useState(null);
     const [inCall, setInCall] = useState(false);
+    const [isMuted, setIsMuted] = useState(false);
     const [doFilter, setDoFilter] = useState(false);
+
 
     const [cameraList, setcameraList] = useState([]);
     const [micsList, setMicsList] = useState([]);
@@ -46,10 +47,11 @@ export default function Call(params) {
         haveOffer,
         haveAnswer,
         haveCandidate,
+        isRemoteMute,
         canInitiateCall,
         callHappening,
         setCallHappening } = useContext(SocketContext);
-    const [finalStream, setFinalStream] = useState(null);
+
     // useEffect(() => {
     //     async function getCameraStreamWithDeviceId() {
     //         try {
@@ -66,8 +68,6 @@ export default function Call(params) {
     //     return () => {
     //     }
     // }, [microphoneDeviceId, cameraDeviceId])
-
-
 
 
     useEffect(() => {
@@ -254,9 +254,10 @@ export default function Call(params) {
                 stop();
                 break;
 
-            case 'toggle-mic':
+            case 'mic-mute':
                 // mute my mic & notify
-                sendPing('toggle mic', roomName)
+                sendPing('toggle mic', { room: roomName, message: !isMuted });
+                setIsMuted(!isMuted);
                 break;
 
             case 'voice-change':
@@ -284,7 +285,7 @@ export default function Call(params) {
                             <label className='fw-semibold'>Local Stream</label>
                             <div className='container'>
                                 <div className='col'>
-                                    <VideoPlayer className='rounded mx-auto d-block col' stream={localStream} isRemoteStream={false} />
+                                    <VideoPlayer className='rounded mx-auto d-block col' stream={localStream} isRemoteStream={false} muted={true} />
                                 </div>
                             </div>
                         </div>
@@ -297,7 +298,7 @@ export default function Call(params) {
                             <div className='container'>
                                 <div className='col'>
                                     {
-                                        callHappening ? <VideoPlayer className='rounded mx-auto d-block col' stream={remoteStream} isRemoteStream={true} /> :
+                                        callHappening ? <VideoPlayer className='rounded mx-auto d-block col' stream={remoteStream} isRemoteStream={true} muted={isRemoteMute}/> :
                                             <img src='https://via.placeholder.com/480x320.png?text=Waiting+For+Call+to+Initiate' alt='Just a place holder'></img>
                                     }
                                 </div>
@@ -324,9 +325,9 @@ export default function Call(params) {
                     </Button>
                     <Button variant="primary" className="m-2"
                         onClick={e => handleButtonsClick('mic-mute')}
-                        disabled={true}
+                        disabled={!callHappening}
                     >
-                        Mic Mute
+                        {isMuted ? 'Unmute Mic' : 'Mic Mute'}
                     </Button>
 
                     <Button variant="primary" className="m-2"

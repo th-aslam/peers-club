@@ -6,7 +6,7 @@ import React, { useRef, useEffect } from "react";
 
 const VideoPlayer = (props) => {
     const videoContainer = useRef(null);
-    let { stream, isRemoteStream } = props;
+    let { stream, isRemoteStream, muted } = props;
     useEffect(() => {
         if (!videoContainer.current || !stream) return;
         videoContainer.current.srcObject = stream;
@@ -26,12 +26,14 @@ const VideoPlayer = (props) => {
     // }, [props.audioTrack]);
 
     return (
-        <div className="video-container" >
+        <div className="video-container">
             <video ref={videoContainer}
-                muted={isRemoteStream ? false : true}
+                muted={muted}
                 className={`video-player ${!isRemoteStream && "local-video"}`}
                 autoPlay
             ></video>
+            <br></br>
+             {isRemoteStream && muted && <span style={{color: 'red'}}><strong>Currently Muted!</strong></span>} 
         </div>
     );
 }

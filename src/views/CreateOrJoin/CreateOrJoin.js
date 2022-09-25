@@ -93,7 +93,7 @@ export default function CreateOrJoin(params) {
                                 <Form.Label className='fw-semibold'>Watch Yourself Before Joining</Form.Label>
                                 <div className='container'>
                                     <div className='col'>
-                                        <VideoPlayer className='rounded mx-auto d-block col' stream={localStream} isRemoteStream={false} />
+                                        <VideoPlayer className='rounded mx-auto d-block col' stream={localStream} isRemoteStream={false} muted={true} />
                                     </div>
                                 </div>
                             </Form.Group>

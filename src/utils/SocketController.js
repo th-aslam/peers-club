@@ -27,6 +27,8 @@ export default function SocketController(props) {
     const [haveAnswer, setHaveAnswer] = useState(null);
     const [haveCandidate, setHaveCandidate] = useState(null);
 
+    const [isRemoteMute, setisRemoteMute] = useState(false);
+
     // const [call, setcall] = useState(initialState);
     const { roomName, setRoomName, showAlert, hideAlert } = useContext(StoreContext);
     let stopDoublePropagation = false;
@@ -132,6 +134,11 @@ export default function SocketController(props) {
             // });
         });
 
+        socket.on('remote-toggle-mic', (data) => {
+            let { message } = data;
+            setisRemoteMute(message);
+        });
+
         socket.on('log', (array) => {
             console.log('ClientRecvLog: ', ...array);
         });
@@ -211,7 +218,7 @@ export default function SocketController(props) {
             setRoomName('');
             setTimeout(() => {
                 setisCallEnded(false);
-            }, 3000);  
+            }, 3000);
         }
 
     }, [isCallEnded])
@@ -249,6 +256,10 @@ export default function SocketController(props) {
                 console.log('ClientSentLog: Attempted to call other peer in room', roomName);
                 showAlert(ALERTS.CALL_DAILING, { cancelCallback });
                 break;
+            case 'toggle mic':
+                socket.emit('peer-mute', data);
+                console.log('ClientSentLog: Signify my Mute status to other peer in room', data);
+                break;
             default:
                 break;
         }
@@ -263,7 +274,7 @@ export default function SocketController(props) {
     return (
         <SocketContext.Provider value={{
             sendPing, sendMessage,
-            isChannelReady, isInitiator, canInitiateCall, callRinging, callHappening, isPicked, isCallEnded,
+            isChannelReady, isInitiator, canInitiateCall, callRinging, callHappening, isPicked, isCallEnded, isRemoteMute,
             haveIceServers, haveOffer, haveAnswer, haveCandidate,
             setisCallEnded,
             setCallHappening,
