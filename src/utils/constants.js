@@ -19,5 +19,5 @@ export const ALERTS = {
   
   export const SERVER_URLS = {
     LOCAL_SERVER: 'http://localhost:8001',
-    PRODUCTION_SERVER: 'https://peer-club-backend.pages.dev',
+    PRODUCTION_SERVER: 'https://peers-club-backend.herokuapp.com',
   }; 
