@@ -1,6 +1,7 @@
+import { SERVER_URLS } from "./constants";
 
-import convolerAudio from "../assets/LargeWideEchoHall.wav";
-import fireAudio from '../assets/brush_fire-Stephan_Schutze-55390065.mp3';
+
+
 export const demonBeastTransform = async function (stream, doFilter) {
     const audioCtx = new AudioContext();
     const source = audioCtx.createMediaStreamSource(stream);
@@ -16,7 +17,7 @@ export const demonBeastTransform = async function (stream, doFilter) {
     let convolver = audioCtx.createConvolver();
 
     try {
-          const convolerResponse = await fetch("http://localhost:8001/LargeWideEchoHall.wav");
+          const convolerResponse = await fetch(SERVER_URLS.PRODUCTION_SERVER + "/LargeWideEchoHall.wav");
         // const convolerResponse = new Response(convolerAudio);
         const convolverBuffer = await convolerResponse.arrayBuffer();
         convolver.buffer = await audioCtx.decodeAudioData(convolverBuffer);
@@ -28,7 +29,7 @@ export const demonBeastTransform = async function (stream, doFilter) {
     let fire = audioCtx.createBufferSource();
 
     try {
-        const fireResponse = await fetch("http://localhost:8001/brush_fire-Stephan_Schutze-55390065.mp3");
+        const fireResponse = await fetch(SERVER_URLS.PRODUCTION_SERVER + "/brush_fire-Stephan_Schutze-55390065.mp3");
         // const fireResponse = new Response(fireAudio);
         const fireBuffer = await fireResponse.arrayBuffer();
         fire.buffer = await audioCtx.decodeAudioData(fireBuffer);
