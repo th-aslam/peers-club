@@ -28,7 +28,7 @@ const VideoPlayer = (props) => {
     return (
         <div className="video-container">
             <video ref={videoContainer}
-                muted={muted}
+                muted={!isRemoteStream && muted}
                 className={`video-player ${!isRemoteStream && "local-video"}`}
                 autoPlay
             ></video>

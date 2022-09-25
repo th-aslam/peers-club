@@ -2,9 +2,9 @@ import React, { useState, useEffect, useContext } from 'react';
 import io from 'socket.io-client';
 import { SocketContext } from '../contexts/SocketContext';
 import { StoreContext } from '../contexts/StoreContext';
-import { ALERTS } from './constants';
+import { ALERTS, SERVER_URLS } from './constants';
 
-const socket = io("ws://localhost:8001"); //https://peer-club-backend.pages.dev
+const socket = io(SERVER_URLS.PRODUCTION_SERVER); 
 
 
 export default function SocketController(props) {
@@ -153,14 +153,12 @@ export default function SocketController(props) {
                 // pc.setRemoteDescription(new RTCSessionDescription(message));
                 // doAnswer();
             } else if (message.type === 'answer') {
-                console.error('answer aya tha', message);
+                console.warn('Answer arrived via message', message);
                 setHaveAnswer(message);
                 // pc.setRemoteDescription(new RTCSessionDescription(message));
             } else if (message.type === 'candidates') {
-                let remoteCandifates = message.candidatesList;
-                remoteCandifates.forEach(candidate => {
-                    setHaveCandidate(candidate);
-                });
+                let remoteCandidates = message.candidatesList;
+                setHaveCandidate(remoteCandidates);
 
                 // const candidate = new RTCIceCandidate({
                 //     sdpMLineIndex: message.label,

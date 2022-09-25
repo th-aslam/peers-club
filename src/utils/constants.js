@@ -15,3 +15,9 @@ export const ALERTS = {
     offerToReceiveAudio: true,
     offerToReceiveVideo: true,
   }; 
+
+  
+  export const SERVER_URLS = {
+    LOCAL_SERVER: 'http://localhost:8001',
+    PRODUCTION_SERVER: 'https://peer-club-backend.pages.dev',
+  }; 

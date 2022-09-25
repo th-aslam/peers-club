@@ -69,6 +69,13 @@ export default function Call(params) {
     //     }
     // }, [microphoneDeviceId, cameraDeviceId])
 
+    useEffect(() => {
+        if (peerConnection) {
+            const audioTrack = localStream.getAudioTracks()[0];
+            audioTrack.enabled = !isMuted;
+        }
+
+    }, [isMuted])
 
     useEffect(() => {
         const applyFilter = async (stream) => {
@@ -94,7 +101,7 @@ export default function Call(params) {
 
     //The caller will start RTCPeerConnection from this event 
     useEffect(() => {
-        callHappening && maybeStart()
+        !isPicked && callHappening && maybeStart()
     }, [callHappening])
 
     // The receiver will fire this event when accepts the call to do RTCPeerConnection
@@ -124,12 +131,15 @@ export default function Call(params) {
 
     useEffect(() => {
         if (haveCandidate !== null && peerConnection !== null) {
-            console.log('haveCandidate', peerConnection);
-            const candidate = new RTCIceCandidate({
-                sdpMLineIndex: haveCandidate.label,
-                candidate: haveCandidate.candidate,
+            console.log('haveCandidate', haveCandidate);
+            haveCandidate.forEach(c => {
+                const candidate = new RTCIceCandidate({
+                    sdpMLineIndex: c.label,
+                    candidate: c.candidate,
+                });
+                peerConnection.addIceCandidate(candidate);
             });
-            peerConnection.addIceCandidate(candidate);
+
         }
 
     }, [haveCandidate, peerConnection, callHappening])
@@ -166,6 +176,7 @@ export default function Call(params) {
             let pcon = new RTCPeerConnection(haveIceServers);
             pcon.onicecandidate = handleIceCandidate;
             pcon.onaddstream = handleRemoteStreamAdded;
+            // pcon.addEventListener("track", handleRemoteStreamAdded)
             pcon.onremovestream = handleRemoteStreamRemoved;
             console.log('Created RTCPeerConnnection');
             setPeerConnection(pcon);
@@ -196,7 +207,7 @@ export default function Call(params) {
     }
 
     function handleRemoteStreamAdded(event) {
-        console.log('Remote stream added.');
+        console.log('Remote stream added.', event);
         setRemoteStream(event.stream);
     }
 
